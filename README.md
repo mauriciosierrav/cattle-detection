@@ -15,14 +15,14 @@ Siguiendo estas instrucciones podrás obtener una copia del proyecto en funciona
 ####
 2. Asignar un intérprete al proyecto _(se recomienda Python 3.10)_. Esto lo puede hacer con un intérprete local o creando y activando un ambiente virtual con su herramienta favorita para gestión de entornos virtuales.
 ####
-3. Instalar requerimientos
-    ```bash
-    pip install -r requirements.txt 
-    ```
-####
-4. Cambiar al directorio `fastapi` y clonar repositorio de `yolov5`
+3. Cambiar al directorio `fastapi` y clonar repositorio de `yolov5`
     ```bash
     cd fastapi ; git clone git@github.com:ultralytics/yolov5.git 
+    ```
+####
+4. Instalar requerimientos
+    ```bash
+    pip install -r fastapi/yolov5/requirements.txt; pip install -r requirements.txt 
     ```
 ####
 5. Cambiar al directorio principal del proyecto y ejecutar `main.py`
