@@ -22,12 +22,12 @@ Siguiendo estas instrucciones podrás obtener una copia del proyecto en funciona
 ####
 4. Instalar requerimientos
     ```bash
-    pip install -r fastapi/yolov5/requirements.txt; pip install -r requirements.txt 
+    cd .. ; pip install -r fastapi/yolov5/requirements.txt ; pip install -r requirements.txt 
     ```
 ####
 5. Cambiar al directorio principal del proyecto y ejecutar `main.py`
     ```bash
-    cd .. ; python3 main.py
+    python3 main.py
     ```
 ####
 6. Mover los pesos descargados a la carpeta `fastapi/models`
