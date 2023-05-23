@@ -3,6 +3,7 @@ import cv2
 import random
 import numpy as np
 import itertools
+import os
 
 
 class Albumentations:
@@ -57,3 +58,48 @@ class Albumentations:
             bboxes.append(transformed['bboxes'])
             transforms.append([str(e).split("(")[0] for e in T])
         return [images, bboxes, transforms]
+
+
+class AlbumentationsBatch:
+    def __init__(self, path_imgs: str, path_labels: str, new_path_imgs: str,
+                 new_path_labels: str, allowed_extensions: list, augmentations: int):
+        self.path_imgs = path_imgs
+        self.path_labels = path_labels
+        self.new_path_imgs = new_path_imgs
+        self.new_path_labels = new_path_labels
+        self.allowed_extensions = allowed_extensions
+        self.augmentations = augmentations
+        self.files = [file for file in os.listdir(path_imgs)
+                      if str.lower(os.path.splitext(file)[1]) in self.allowed_extensions]
+
+    def exec_batch_pipeline(self):
+        """
+        """
+        try:
+            # iterate for each image and apply the defined number of augmentations
+            for file in self.files:
+                root, ext = os.path.splitext(file)
+                path_img = os.path.join(self.path_imgs, root + ext)
+                path_label = os.path.join(self.path_labels, root + '.txt')
+
+                imgs = Albumentations(path_img=path_img, path_label=path_label,
+                                      augmentations=self.augmentations).exec_pipeline()
+                transformations = len(imgs[0])
+
+                for i in range(transformations):
+                    # transformation name
+                    t = '-'.join(imgs[2][i])
+                    # save each transformed image
+                    image = cv2.cvtColor(imgs[0][i], cv2.COLOR_RGB2BGR)
+                    if imgs[2][i] == 'Original':
+                        t = imgs[2][i]
+                    cv2.imwrite(os.path.join(self.new_path_imgs, f'{root + "-" + t + ".jpg"}'), image)
+
+                    # save each transformed label
+                    with open(os.path.join(self.new_path_labels, f'{root + "-" + t + ".txt"}'), 'w') as f:
+                        for label in imgs[1][i]:
+                            label = [0] + list(label[:4])
+                            line = ' '.join(str(e) for e in label)
+                            f.write(line + '\n')
+        except Exception as e:
+            raise Exception(e)
