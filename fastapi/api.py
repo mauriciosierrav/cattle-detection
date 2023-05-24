@@ -58,20 +58,14 @@ def get_prediction(file: bytes = File(...), weights: str = Query(default="yolov5
     headers:    confidence, class and name of predictions.
     """
     # Instantiate model from model folder
-    absolute_path = os.path.abspath(__file__)
-    fileDirectory = os.path.dirname(absolute_path)
-    repo_or_dir = os.path.join(fileDirectory, f'yolov5')
-    path = os.path.join(fileDirectory, f'model/{weights}')
+    fileDirectory = os.path.dirname(os.path.abspath(__file__))
+    repo_or_dir, path = os.path.join(fileDirectory, f'yolov5'), os.path.join(fileDirectory, f'model/{weights}')
 
     model = torch.hub.load(repo_or_dir, 'custom', path, source='local')
 
     # modify the name of the cow class and make it lower case
     names = dict(model.names)
-    for k, v in names.items():
-        model.names[k] = str.lower(v)
-        if v == 'cow':
-            model.names[k] = 'cattle'
-            break
+    model.names = {k: 'cattle' if v == 'cow' else str.lower(v) for k, v in names.items()}
 
     # predictions
     segmented_image = get_image_from_bytes(file)
