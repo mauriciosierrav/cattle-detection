@@ -1,4 +1,5 @@
 import io
+import os
 import requests
 from PIL import Image
 import streamlit as st
@@ -17,7 +18,7 @@ st.write(
 
     Instructions for use:
     - Upload an image from your computer
-    - Select the model you want to use for prediction (best.pt is the model re-trained by the developers).
+    - Select the model you want to use for prediction
     - Click on "Get Prediction" and get the inference and a summary of the results.
 
     This web app uses a FastAPI service as a backend. Visit this URL http://127.0.0.1:8000/docs for documentation"""
@@ -26,17 +27,15 @@ st.write(
 # file uploader
 input_image = st.file_uploader("Upload an image")
 
+# models
+path_models = '../fastapi/model/'
+models = [file for file in os.listdir(path_models) if str.lower(os.path.splitext(file)[1]) == '.pt']
+
 # select model
-model_s = st.radio("Select model you want to use", ['best.pt', 'yolov5s.pt', 'yolov5l.pt'])
-if model_s == 'best.pt':
-    params = {'weights': 'best.pt'}
-    st.write('The selected model is: best.pt')
-elif model_s == 'yolov5s.pt':
-    params = {'weights': 'yolov5s.pt'}
-    st.write('The selected model is: yolov5s.pt')
-elif model_s == 'yolov5l.pt':
-    params = {'weights': 'yolov5l.pt'}
-    st.write('The selected model is: yolov5.pt')
+i = models.index('yolov5s.pt')
+model_s = st.radio("Select model you want to use", models, index=i)
+params = {'weights': model_s}
+st.write(f'The selected model is: {model_s}')
 
 
 def process(image, server_url):
