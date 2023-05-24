@@ -6,7 +6,7 @@
 
 ## Comenzando 🚀
 
-Siguiendo estas instrucciones podrás obtener una copia del proyecto en funcionamiento en tu máquina local para propósitos de desarrollo y pruebas.
+Siguiendo estas instrucciones puede obtener una copia del proyecto en funcionamiento en su máquina local para propósitos de desarrollo y pruebas.
 
 1. Clonar el repositorio
     ```bash
@@ -20,17 +20,17 @@ Siguiendo estas instrucciones podrás obtener una copia del proyecto en funciona
     cd fastapi ; git clone git@github.com:ultralytics/yolov5.git 
     ```
 ####
-4. Instalar requerimientos
+4. Cambiar al directorio principal del proyecto e instalar requerimientos
     ```bash
     cd .. ; pip install -r fastapi/yolov5/requirements.txt ; pip install -r requirements.txt 
     ```
 ####
-5. Cambiar al directorio principal del proyecto y ejecutar `main.py`
+5.  Ejecutar `main.py` para descargar los modelos **yolov5l.pt** y **yolov5s.pt**. _(Puede agregar otros modelos al script)_
     ```bash
     python3 main.py
     ```
 ####
-6. Mover los pesos descargados a la carpeta `fastapi/models`
+6. Mover los modelos descargados a la carpeta `fastapi/models`
     ```bash
     mv yolov5l.pt fastapi/model/ ; mv yolov5s.pt fastapi/model/
     ```

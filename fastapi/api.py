@@ -36,12 +36,12 @@ def get_image_from_bytes(binary_image, max_size=400) -> Image:
 
 
 @app.post("/object-to-img")
-def get_prediction(file: bytes = File(...), weights: str = Query(default="best.pt")) -> Response:
+def get_prediction(file: bytes = File(...), weights: str = Query(default="yolov5s.pt")) -> Response:
     """
     Possible ``weights`` values:
-        - best.pt (default)
-        - yolov5s.pt
+        - yolov5s.pt (default)
         - yolov5l.pt
+        - any other model in ./model/
 
     Parameters
     ----------
@@ -64,6 +64,14 @@ def get_prediction(file: bytes = File(...), weights: str = Query(default="best.p
     path = os.path.join(fileDirectory, f'model/{weights}')
 
     model = torch.hub.load(repo_or_dir, 'custom', path, source='local')
+
+    # modify the name of the cow class and make it lower case
+    names = dict(model.names)
+    for k, v in names.items():
+        model.names[k] = str.lower(v)
+        if v == 'cow':
+            model.names[k] = 'cattle'
+            break
 
     # predictions
     segmented_image = get_image_from_bytes(file)
