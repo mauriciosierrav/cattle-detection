@@ -149,7 +149,14 @@
                        ├───────── dataset.yml
     ```
 ###
-8.  Modificar _dataset.yml_, dado que `path` y `val` no serían correctos para el _**dataset_propio**_
+8.  Copiar los siguientes archivos que contienen cambios necesarios respecto a los valores predeterminados de _yolov5_
+    ```bash
+    ! cp /content/dataset_propio/utils/custom_yolo_files/augmentations.py /content/yolov5/utils/
+    ! cp /content/dataset_propio/utils/custom_yolo_files/hyp.scratch-low.yaml /content/yolov5/data/hyps/
+    ! cp /content/dataset_propio/utils/custom_yolo_files/val_custom.py /content/yolov5/
+    ```
+###
+9.  Modificar _dataset.yml_, dado que `path` y `val` no serían correctos para el _**dataset_propio**_
     ```python
     import yaml
        
@@ -168,8 +175,16 @@
         print(exc)
     ```
 ###
-9.  Crear nuevas imágenes para `train` del _**dataset_propio**_ utilizando **Albumentations**
-    ```python
+10. Crear los directorios `dataset_propio_aug` y `dataset_externo_aug` con sus respectivos sub-directorios para almacenar las imagenes aumentadas.
+    ```bash
+    !mkdir -p ./dataset_propio_aug/images/train/
+    !mkdir -p ./dataset_propio_aug/labels/train/
+    !mkdir -p ./dataset_externo_aug/images/train/
+    !mkdir -p ./dataset_externo_aug/labels/train/
+    ```
+###
+11.  Crear nuevas imágenes para `train` del _**dataset_propio**_ utilizando **Albumentations**.
+  ```python
     from dataset_propio.utils import AlbumentationsBatch
         
     # define mandatory variables
@@ -181,10 +196,9 @@
     batch = AlbumentationsBatch(path_imgs, path_labels, new_path_imgs, new_path_labels,
                                     allowed_extensions=['.jpg', '.jpeg', '.png'], augmentations=5)
     batch.exec_batch_pipeline()
-    ```
-   
+  ``` 
 ###
-10. Crear nuevas imágenes para `train` del _**dataset_externo**_ utilizando **Albumentations**
+12. Crear nuevas imágenes para `train` del _**dataset_externo**_ utilizando **Albumentations**
     ```python
     from dataset_propio.utils import AlbumentationsBatch
     
@@ -199,9 +213,80 @@
     batch.exec_batch_pipeline()
     ```
 ###
-11. <span style="color: Red; "> Borrar lo de hyps y lo de augmentation de YOLOv5 </span>
+13. Considerando que el dataset de validación será siempre el mismo para todos los modelos se deben ejecutar los siguientes comandos.
+    ```bash
+    !mkdir -p ./dataset_propio/images/test/
+    !mkdir -p ./dataset_propio/labels/test/
+
+    !cp ./dataset_propio/images/val/* ./dataset_propio/images/test/
+    !cp ./dataset_propio/labels/val/* ./dataset_propio/labels/test/
+
+    !rm ./dataset_externo/images/test/*
+    !rm ./dataset_externo/images/validation/*
+    !rm ./dataset_externo/labels/test/*
+    !rm ./dataset_externo/labels/validation/*
+
+    !cp ./dataset_propio/images/test/* ./dataset_externo/images/test/
+    !cp ./dataset_propio/images/val/* ./dataset_externo/images/validation/
+    !cp ./dataset_propio/labels/test/* ./dataset_externo/labels/test/
+    !cp ./dataset_propio/labels/val/* ./dataset_externo/labels/validation/
+
+    !mkdir -p ./dataset_externo_aug/images/test/
+    !mkdir -p ./dataset_externo_aug/images/validation/
+    !mkdir -p ./dataset_externo_aug/labels/test/
+    !mkdir -p ./dataset_externo_aug/labels/validation/
+
+    !cp ./dataset_propio/images/test/* ./dataset_externo_aug/images/test/
+    !cp ./dataset_propio/images/val/* ./dataset_externo_aug/images/validation/
+    !cp ./dataset_propio/labels/test/* ./dataset_externo_aug/labels/test/
+    !cp ./dataset_propio/labels/val/* ./dataset_externo_aug/labels/validation/
+
+    !mkdir -p ./dataset_propio_aug/images/test/
+    !mkdir -p ./dataset_propio_aug/images/val/
+    !mkdir -p ./dataset_propio_aug/labels/test/
+    !mkdir -p ./dataset_propio_aug/labels/val/
+
+    !cp ./dataset_propio/images/test/* ./dataset_propio_aug/images/test/
+    !cp ./dataset_propio/images/val/* ./dataset_propio_aug/images/val/
+    !cp ./dataset_propio/labels/test/* ./dataset_propio_aug/labels/test/
+    !cp ./dataset_propio/labels/val/* ./dataset_propio_aug/labels/val/
+
 ###
-12. Realizar re-entrenamiento al modelo _yolov5s.pt_ (o cualquier otro modelo de YOLOv5)
+14. Configurar los archivos _dataset.yaml_ para los datasets aumentados
+    ```bash
+    !cp /content/dataset_externo/dataset.yaml /content/dataset_externo_aug
+    !cp /content/dataset_propio/dataset.yaml /content/dataset_propio_aug
+      ```
+    ```python
+    with open('dataset_propio_aug/dataset.yaml') as f:
+      try:
+        doc = yaml.safe_load(f)
+        doc['path'] = '/content/dataset_propio_aug'
+      except yaml.YAMLError as exc:
+        print(exc)
+    
+    with open('dataset_propio_aug/dataset.yaml', 'w') as f:
+      try:
+        yaml.dump(doc, f)
+      except yaml.YAMLError as exc:
+        print(exc)
+      ```
+      ```python
+    with open('dataset_externo_aug/dataset.yaml') as f:
+      try:
+        doc = yaml.safe_load(f)
+        doc['path'] = '/content/dataset_externo_aug'
+      except yaml.YAMLError as exc:
+        print(exc)
+      
+    with open('dataset_externo_aug/dataset.yaml', 'w') as f:
+      try:
+        yaml.dump(doc, f)
+      except yaml.YAMLError as exc:
+        print(exc)
+      ```
+###
+15. Realizar re-entrenamiento al modelo _yolov5s.pt_ (o cualquier otro modelo de YOLOv5) usando los dataset originales y/o aumentados.
     ```bash
     # re-entrenamiento con el dataset_externo
     !python yolov5/train.py --weights yolov5s.pt --data /content/dataset_externo/dataset.yaml --epochs 50 --batch 10 --project train/ --name dataset_externo
@@ -214,6 +299,19 @@
     # re-entrenamiento al modelo dataset_externo_best.pt con el dataset_propio
     !python yolov5/train.py --weights /content/train/dataset_externo/weights/best.pt --data /content/dataset_propio/dataset.yaml --epochs 50 --batch 10 --project train/ --name dataset_propio2
     ```
+    ```bash
+    # re-entrenamiento con el dataset_externo aumentado
+    !python yolov5/train.py --weights yolov5s.pt --data /content/dataset_externo_aug/dataset.yaml --epochs 50 --batch 10 --project train/ --name dataset_externo_aug
+    ```
+    ```bash
+    # re-entrenamiento con el dataset_propio aumentado
+    !python yolov5/train.py --weights yolov5s.pt --data /content/dataset_propio_aug/dataset.yaml --epochs 50 --batch 10 --project train/ --name dataset_propio_aug
+    ```    
+    ```bash
+    # re-entrenamiento al modelo dataset_externo_aug_best.pt con el dataset_propio ambos aumentados
+    !python yolov5/train.py --weights /content/train/dataset_externo_aug/weights/best.pt --data /content/dataset_propio_aug/dataset.yaml --epochs 50 --batch 10 --project train/ --name dataset_propio_aug2
+    ```
+
     Los argumentos más importantes son:
     * --weights: <font color="Green">model path or triton URL</font>
     * --data: <font color="Green">dataset.yaml path</font> 
@@ -225,13 +323,9 @@
     * --project: train/
     * --name: save results to project/<font color="Green">**name**</font>
 ###
-13. <span style="color: Red; "> Realizar <code>`test`</code> de cada uno de los modelos para obtener métricas de desempeño y compararlos entré sí (si es necesario? no es suficiente con el val que hace por defecto al entrenar? si realmente es necesario hay que dejar 5 imgs en val y la sotras reservarlas para este punto.</span>
+16. <span style="color: Red; "> Descargar los modelos seleccionados y llevarlos a la carpeta fastapi/model/ para usarlos en la API.
 ###
-14. <span style="color: Red; "> generar aumentos en el dataset de val para correr nuevamente val y probar la robustez del modelo</span>
-###
-15. <span style="color: Red; "> Descargar los modelos seleccionados y llevarlos a la carpeta fastapi/model/ para usarlos en la API.
-###
-16. Ejecutar la inferencia de detección de objetos en los diferentes modelos (opcional)
+17. Ejecutar la inferencia de detección de objetos en los diferentes modelos (opcional)
     ```bash
     # Detect con el modelo pre-entrenado yolov5s.pt
     !python yolov5/detect.py --weights yolov5s.pt --data /content/yolov5/data/coco128.yaml --source /content/dataset_propio/images/test/ --conf-thres 0.4 --project detect/ --name yolov5
