@@ -111,10 +111,7 @@ class AlbumentationsBatch:
     def _maybe_create_dir(self,dirpath: str):
         """Create a directory if it does not exist"""
         if not os.path.isdir(dirpath):
-            try:
-                os.mkdir(dirpath)
-            except FileExistsError:
-                pass
+            os.mkdir(dirpath)
 
 
 
