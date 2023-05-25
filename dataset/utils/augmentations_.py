@@ -76,42 +76,37 @@ class AlbumentationsBatch:
         """
         """
         try:
-            #create paths if they do not exist 
-            self._maybe_create_dir(self.new_path_imgs)
-            self._maybe_create_dir(self.new_path_labels)
-
             # iterate for each image and apply the defined number of augmentations
             for file in self.files:
-                root, ext = os.path.splitext(file)
-                path_img = os.path.join(self.path_imgs, root + ext)
-                path_label = os.path.join(self.path_labels, root + '.txt')
+                try: 
+                    root, ext = os.path.splitext(file)
+                    path_img = os.path.join(self.path_imgs, root + ext)
+                    path_label = os.path.join(self.path_labels, root + '.txt')
 
-                imgs = Albumentations(path_img=path_img, path_label=path_label,
-                                      augmentations=self.augmentations).exec_pipeline()
-                transformations = len(imgs[0])
+                    imgs = Albumentations(path_img=path_img, path_label=path_label,
+                                        augmentations=self.augmentations).exec_pipeline()
+                    transformations = len(imgs[0])
 
-                for i in range(transformations):
-                    # transformation name
-                    t = '-'.join(imgs[2][i])
-                    # save each transformed image
-                    image = cv2.cvtColor(imgs[0][i], cv2.COLOR_RGB2BGR)
-                    if imgs[2][i] == 'Original':
-                        t = imgs[2][i]
-                    cv2.imwrite(os.path.join(self.new_path_imgs, f'{root + "-" + t + ".jpg"}'), image)
+                    for i in range(transformations):
+                        # transformation name
+                        t = '-'.join(imgs[2][i])
+                        # save each transformed image
+                        image = cv2.cvtColor(imgs[0][i], cv2.COLOR_RGB2BGR)
+                        if imgs[2][i] == 'Original':
+                            t = imgs[2][i]
+                        cv2.imwrite(os.path.join(self.new_path_imgs, f'{root + "-" + t + ".jpg"}'), image)
 
-                    # save each transformed label
-                    with open(os.path.join(self.new_path_labels, f'{root + "-" + t + ".txt"}'), 'w') as f:
-                        for label in imgs[1][i]:
-                            label = [0] + list(label[:4])
-                            line = ' '.join(str(e) for e in label)
-                            f.write(line + '\n')
+                        # save each transformed label
+                        with open(os.path.join(self.new_path_labels, f'{root + "-" + t + ".txt"}'), 'w') as f:
+                            for label in imgs[1][i]:
+                                label = [0] + list(label[:4])
+                                line = ' '.join(str(e) for e in label)
+                                f.write(line + '\n')
+                except Exception as e:
+                    print (f'image {path_img} failed with Exception:',e)
         except Exception as e:
             raise Exception(e)
         
-    def _maybe_create_dir(self,dirpath: str):
-        """Create a directory if it does not exist"""
-        if not os.path.isdir(dirpath):
-            os.mkdir(dirpath)
 
 
 
