@@ -5,9 +5,21 @@ import numpy as np
 import itertools
 import os
 
+class TransformsPipeline: 
+    def __init__(self, transforms1: list = [],transforms2: list = [],augmentations: int = 0) -> list:
+        if transforms2 and transforms1:
+            Transforms_ = [list(x) for x in itertools.product(transforms1, transforms2)]
+        else: 
+            Transforms_ = [transforms2 if transforms2 else transforms1]
+        if augmentations == 0:
+            self.transforms_pipeline = random.sample(Transforms_, len(Transforms_))
+        elif augmentations > len(Transforms_):
+            raise Exception(f'The maximum number of augmentations is {len(Transforms_)}')
+        else:
+            self.transforms_pipeline =  random.sample(Transforms_, augmentations)
 
 class Albumentations:
-    def __init__(self, path_img: str, path_label: str, augmentations: int):
+    def __init__(self, path_img: str, path_label: str, augmentations: int, transforms_pipeline: TransformsPipeline = None):
         """
         If augmentations = 0 it will do all the pipelines that are configured in the Pipeline class.
         """
@@ -17,28 +29,23 @@ class Albumentations:
         bboxes_r = np.loadtxt(path_label)
         self.bboxes = [list(np.append(i[1:], i[0])) for i in bboxes_r]
 
-        H, W = self.image.shape[:2]
-        geometric_transforms = [A.SafeRotate(p=1, always_apply=True),
-                                A.Flip(p=1, always_apply=True)]
-        crops_transforms = [A.RandomResizedCrop(height=H, width=W, p=1, always_apply=True)]
-        sat_con_bri_hue = [A.ToGray(p=1, always_apply=True),
-                           A.HueSaturationValue(p=1, always_apply=True),
-                           A.RandomBrightnessContrast(p=1, always_apply=True)]
-        effects_or_simulations = [A.RandomRain(p=1, always_apply=True, blur_value=1, brightness_coefficient=0.9),
-                                  A.RandomShadow(p=1, always_apply=True, num_shadows_upper=100,
-                                                 shadow_roi=(0, 0.3, 1, 1))]
-        blur = [A.Blur(p=1, always_apply=True)]
+        if transforms_pipeline is None: 
+            H, W = self.image.shape[:2]
+            geometric_transforms = [A.SafeRotate(p=1, always_apply=True),
+                                    A.Flip(p=1, always_apply=True)]
+            crops_transforms = [A.RandomResizedCrop(height=H, width=W, p=1, always_apply=True)]
+            sat_con_bri_hue = [A.ToGray(p=1, always_apply=True),
+                            A.HueSaturationValue(p=1, always_apply=True),
+                            A.RandomBrightnessContrast(p=1, always_apply=True)]
+            effects_or_simulations = [A.RandomRain(p=1, always_apply=True, blur_value=1, brightness_coefficient=0.9),
+                                    A.RandomShadow(p=1, always_apply=True, num_shadows_upper=100,
+                                                    shadow_roi=(0, 0.3, 1, 1))]
+            blur = [A.Blur(p=1, always_apply=True)]
 
-        transforms1 = geometric_transforms + crops_transforms
-        transforms2 = sat_con_bri_hue + effects_or_simulations + blur
-        Transforms_ = [list(x) for x in itertools.product(transforms1, transforms2)]
-
-        if augmentations == 0:
-            self.Transforms = random.sample(Transforms_, len(Transforms_))
-        elif augmentations > len(Transforms_):
-            raise Exception(f'The maximum number of augmentations is {len(Transforms_)}')
-        else:
-            self.Transforms = random.sample(Transforms_, augmentations)
+            transforms1 = geometric_transforms + crops_transforms
+            transforms2 = sat_con_bri_hue + effects_or_simulations + blur
+            transforms_pipeline = TransformsPipeline(transforms1,transforms2,augmentations)
+        self.transforms_pipeline = transforms_pipeline.transforms_pipeline
 
     def exec_pipeline(self) -> list:
         """
@@ -50,7 +57,7 @@ class Albumentations:
         images = [self.image]
         bboxes = [self.bboxes]
         transforms = ['Original']
-        for T in self.Transforms:
+        for T in self.transforms_pipeline:
             transform = A.Compose(T, bbox_params=A.BboxParams(format='yolo', min_visibility=0.3))
             transformed = transform(image=self.image, bboxes=self.bboxes)
 
@@ -62,13 +69,15 @@ class Albumentations:
 
 class AlbumentationsBatch:
     def __init__(self, path_imgs: str, path_labels: str, new_path_imgs: str,
-                 new_path_labels: str, allowed_extensions: list, augmentations: int):
+                 new_path_labels: str, allowed_extensions: list, augmentations: int,
+                 transforms_pipeline: TransformsPipeline = None):
         self.path_imgs = path_imgs
         self.path_labels = path_labels
         self.new_path_imgs = new_path_imgs
         self.new_path_labels = new_path_labels
         self.allowed_extensions = allowed_extensions
         self.augmentations = augmentations
+        self.transforms_pipeline = transforms_pipeline
         self.files = [file for file in os.listdir(path_imgs)
                       if str.lower(os.path.splitext(file)[1]) in self.allowed_extensions]
 
@@ -84,7 +93,8 @@ class AlbumentationsBatch:
                     path_label = os.path.join(self.path_labels, root + '.txt')
 
                     imgs = Albumentations(path_img=path_img, path_label=path_label,
-                                        augmentations=self.augmentations).exec_pipeline()
+                                        augmentations=self.augmentations,
+                                        transforms_pipeline=self.transforms_pipeline).exec_pipeline()
                     transformations = len(imgs[0])
 
                     for i in range(transformations):
