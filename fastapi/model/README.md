@@ -341,7 +341,183 @@
     * --conf-thres: 0.4
     * --project: detect/
     * --name: save results to project/<font color="Green">**name**</font>
+###
+18. Probar el desempeño del modelo pre-entrenado Yolo sobre el dataset de validación para tener un desempeño de referencia. 
+    ```bash
+    !mkdir -p ./dataset_propio_validation/
+    !cp -r /content/dataset_propio/* /content/dataset_propio_validation/
+    !cp /content/yolov5/data/coco128.yaml /content/dataset_propio_validation/dataset.yaml
+    ```
+    ```python
+    import yaml
 
+    with open('dataset_propio_validation/dataset.yaml') as f:
+      try:
+        doc = yaml.safe_load(f)
+        doc['path'] = '/content/dataset_propio_validation'
+        doc['val'] = './images/val'
+        doc['test'] = './images/test/'
+        doc['train'] = './images/train/'
+        doc['download'] = ''
+      except yaml.YAMLError as exc:
+        print(exc)
+
+    with open('dataset_propio_validation/dataset.yaml', 'w') as f:
+      try:
+        yaml.dump(doc, f)
+      except yaml.YAMLError as exc:
+        print(exc)
+
+    import os
+    path_to_edit = '/content/dataset_propio_validation/labels/val/'
+    images = os.listdir(path_to_edit)
+    img_paths = [path_to_edit + img for img in images]
+    
+    def replace_class(txt_file):
+      replaced_content = ""
+      with open(txt_file, 'r') as f:
+        for line in f.readlines():
+          new_line = '19'+line[1:]
+          replaced_content = replaced_content + new_line
+      f.close()
+
+    write_file = open(txt_file, "w")
+    write_file.write(replaced_content)
+    write_file.close()
+
+    for txt_path in img_paths:
+      replace_class(txt_path)
+    ```
+    ```bash
+    ! mkdir -p dataset_propio_validation/images/test/
+    ! mkdir -p dataset_propio_validation/labels/test/
+    ! cp dataset_propio_validation/images/val/* dataset_propio_validation/images/test/
+    ! cp dataset_propio_validation/labels/val/* dataset_propio_validation/labels/test/
+
+    # Validation   
+    python yolov5/val_custom.py --weights yolov5s.pt --data /content/dataset_propio_validation/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_propio
+    ```
+###
+19. Medir la robustez del modelo generando datasets que reflejen condiciones como nieve, noche, cambios de perpectiva, baja resolución, niebla, entre otros, y evaluando el desempeño del modelo respecto a cada uno de ellos. 
+
+    ```bash
+    !mkdir -p ./dataset_robustez_downscale/images/val/
+    !mkdir -p ./dataset_robustez_downscale/labels/val/
+
+    !mkdir -p ./dataset_robustez_randomfog/images/val/
+    !mkdir -p ./dataset_robustez_randomfog/labels/val/
+
+    !mkdir -p ./dataset_robustez_randomsnow/images/val/
+    !mkdir -p ./dataset_robustez_randomsnow/labels/val/
+
+    !mkdir -p ./dataset_robustez_night/images/val/
+    !mkdir -p ./dataset_robustez_night/labels/val/
+
+    !mkdir -p ./dataset_robustez_mud/images/val/
+    !mkdir -p ./dataset_robustez_mud/labels/val/
+    ```
+    ```python
+    from dataset_propio.utils import AlbumentationsBatch,TransformsPipeline
+    import albumentations as A
+
+    def generate_sturdiness_dataset(transform,source_folder,destination_folder):
+        transforms_robustez = TransformsPipeline(transforms1 = transform, augmentations = 1)
+        print('generating pipeline',transforms_robustez.transforms_pipeline)
+        path_imgs = source_folder + 'images/val/'
+        path_labels = source_folder + 'labels/val/'
+        new_path_imgs = destination_folder + 'images/val/'
+        new_path_labels = destination_folder + 'labels/val/'
+        batch = AlbumentationsBatch(path_imgs, path_labels, new_path_imgs, new_path_labels,
+                                    allowed_extensions=['.jpg', '.jpeg', '.png'], 
+                                    transforms_pipeline = transforms_robustez,
+                                    augmentations=1).exec_batch_pipeline()
+
+    sturdiness_transforms = [[A.Downscale(p=1, always_apply=True,scale_min=0.2, scale_max=0.2)],
+                            [A.RandomFog(p=1, always_apply=True,fog_coef_upper=0.3,fog_coef_lower=0.3)],
+                            [A.RandomSnow(p=1, always_apply=True,snow_point_lower=0.3, snow_point_upper=0.3,
+                                brightness_coeff=3.5)],
+                            [A.ColorJitter(p=1, always_apply=True,brightness=(0.3,0.3), 
+                                  contrast=(0.5,0.5), 
+                                  saturation=(0.6,0.6), 
+                                  hue=(0.3,0.3))],                         
+                            [A.Perspective(p=1, always_apply=True,scale=(0.2, 0.2), keep_size=True, 
+                                  interpolation=1,fit_output=True)]]
+    sturdiness_folders = ['./dataset_robustez_downscale/','./dataset_robustez_randomfog/',
+                          './dataset_robustez_randomsnow/','./dataset_robustez_night/',
+                          './dataset_robustez_mud/']
+    for t,f in zip(sturdiness_transforms,sturdiness_folders):
+      generate_sturdiness_dataset(t,'./dataset_propio/',f)
+    ```
+    ```bash
+    !rm ./dataset_robustez_downscale/images/val/*Original.jpg
+    !rm ./dataset_robustez_downscale/labels/val/*Original.txt
+    !rm ./dataset_robustez_randomfog/images/val/*Original.jpg
+    !rm ./dataset_robustez_randomfog/labels/val/*Original.txt
+    !rm ./dataset_robustez_randomsnow/images/val/*Original.jpg
+    !rm ./dataset_robustez_randomsnow/labels/val/*Original.txt
+    !rm ./dataset_robustez_night/images/val/*Original.jpg
+    !rm ./dataset_robustez_night/labels/val/*Original.txt
+    !rm ./dataset_robustez_mud/images/val/*Original.jpg
+    !rm ./dataset_robustez_mud/labels/val/*Original.txt
+
+    ! mkdir -p dataset_robustez_downscale/images/test/
+    ! mkdir -p dataset_robustez_downscale/labels/test/
+    ! cp dataset_robustez_downscale/images/val/* dataset_robustez_downscale/images/test/
+    ! cp dataset_robustez_downscale/labels/val/* dataset_robustez_downscale/labels/test/
+    ! cp dataset_propio/dataset.yaml dataset_robustez_downscale/
+
+
+    ! mkdir -p dataset_robustez_randomfog/images/test/
+    ! mkdir -p dataset_robustez_randomfog/labels/test/
+    ! cp dataset_robustez_randomfog/images/val/* dataset_robustez_randomfog/images/test/
+    ! cp dataset_robustez_randomfog/labels/val/* dataset_robustez_randomfog/labels/test/
+    ! cp dataset_propio/dataset.yaml dataset_robustez_randomfog/
+
+
+    ! mkdir -p dataset_robustez_randomsnow/images/test/
+    ! mkdir -p dataset_robustez_randomsnow/labels/test/
+    ! cp dataset_robustez_randomsnow/images/val/* dataset_robustez_randomsnow/images/test/
+    ! cp dataset_robustez_randomsnow/labels/val/* dataset_robustez_randomsnow/labels/test/
+    ! cp dataset_propio/dataset.yaml dataset_robustez_randomsnow/
+
+
+    ! mkdir -p dataset_robustez_night/images/test/
+    ! mkdir -p dataset_robustez_night/labels/test/
+    ! cp dataset_robustez_night/images/val/* dataset_robustez_night/images/test/
+    ! cp dataset_robustez_night/labels/val/* dataset_robustez_night/labels/test/
+    ! cp dataset_propio/dataset.yaml dataset_robustez_night/
+
+
+    ! mkdir -p dataset_robustez_mud/images/test/
+    ! mkdir -p dataset_robustez_mud/labels/test/
+    ! cp dataset_robustez_mud/images/val/* dataset_robustez_mud/images/test/
+    ! cp dataset_robustez_mud/labels/val/* dataset_robustez_mud/labels/test/
+    ! cp dataset_propio/dataset.yaml dataset_robustez_mud/
+
+    #Se deben editar los dataset.yaml para que apunten al folder correcto
+
+    #Correr las validaciones:
+    python yolov5/val.py --weights best_externo.pt --data /content/dataset_robustez_downscale/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_robustez_downscale_ext
+
+    python yolov5/val.py --weights best_externo.pt --data /content/dataset_robustez_randomfog/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_robustez_randomfog_ext
+
+    python yolov5/val.py --weights best_externo.pt --data /content/dataset_robustez_randomsnow/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_robustez_randomsnow_ext
+
+    python yolov5/val.py --weights best_externo.pt --data /content/dataset_robustez_night/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_robustez_night_ext
+
+    python yolov5/val.py --weights best_externo.pt --data /content/dataset_robustez_mud/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_robustez_mud_ext
+
+
+    python yolov5/val.py --weights best_externo_aug.pt --data /content/dataset_robustez_downscale/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_robustez_downscale_ext_aug
+
+    python yolov5/val.py --weights best_externo_aug.pt --data /content/dataset_robustez_randomfog/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_robustez_randomfog_ext_aug
+
+    python yolov5/val.py --weights best_externo_aug.pt --data /content/dataset_robustez_randomsnow/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_robustez_randomsnow_ext_aug
+
+    python yolov5/val.py --weights best_externo_aug.pt --data /content/dataset_robustez_night/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_robustez_night_ext_aug
+
+    python yolov5/val.py --weights best_externo_aug.pt --data /content/dataset_robustez_mud/dataset.yaml --task test --conf-thres 0.5 --project Validation/ --name dataset_robustez_mud_ext_aug
+    ```
 #
 ## Fuentes de consulta
 
