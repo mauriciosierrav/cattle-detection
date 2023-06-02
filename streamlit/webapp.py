@@ -71,11 +71,8 @@ if st.button("Get Prediction"):
         # show result as json
         headers_ = dict(segments.headers)
         headers_['execution_date'] = headers_.pop('date')
-        rem_list = ['server', 'content-length', 'content-type']
-        for key in rem_list:
-            del headers_[key]
-        json_headers = json.dumps(headers_)
-        st.json(json_headers)
+        headers_ = {k: v for k, v in segments.headers.items() if k not in ['server', 'content-length', 'content-type']}
+        st.json(json.dumps(headers_))
     else:
         # handle case with no image
         st.write("Insert an image!")

@@ -65,7 +65,7 @@ def get_prediction(file: bytes = File(...), weights: str = Query(default="yolov5
 
     # modify the name of the cow class and make it lower case
     names = dict(model.names)
-    model.names = {k: 'cattle' if v == 'cow' else str.lower(v) for k, v in names.items()}
+    model.names = {k: 'Cattle' if v == 'cow' else v for k, v in names.items()}
 
     # predictions
     segmented_image = get_image_from_bytes(file)
@@ -78,15 +78,9 @@ def get_prediction(file: bytes = File(...), weights: str = Query(default="yolov5
 
     # headers
     results_list = predict.pandas()
-    result_dict = results_list.xyxyn[0][['confidence', 'class', 'name']].to_dict(orient="index")
+    result_dict = results_list.xyxyn[0][['confidence', 'name']].to_dict(orient="index")
     for k, v in result_dict.copy().items():
         result_dict[k]['confidence'] = str(round(result_dict[k]['confidence'] * 100, 1)) + '%'
-        chars = ['{', '}', "'"]
-        text = str(v)
-        for c in chars:
-            if c in text:
-                text = text.replace(c, '')
-        result_dict[k] = text
+        result_dict[k] = str(v).replace('{', '').replace('}', '').replace("'", '')
         result_dict[str(k)] = result_dict.pop(k)
-
     return Response(content=bytes_io.getvalue(), media_type="image/png", headers=result_dict)
