@@ -121,15 +121,12 @@
 7.  Clonar repositorio que tiene el _**dataset_propio**_
     ```bash
     %%shell
-    git clone -n --depth=1 --filter=tree:0 https://github.com/mauriciosierrav/cattle-detection.git
-    cd cattle-detection
-    git sparse-checkout set --no-cone dataset/labels dataset/images dataset/utils
-    git checkout
-    
-    # replace name and delete cattle-detection folder
-    cd ..
-    mv cattle-detection/dataset dataset_propio
-    rm -rf cattle-detection/
+    file_ID="1VffSYJMzuC-uq9sv2flhxPdwYkXqOxR9"
+    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=$file_ID' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=$file_ID" -O dataset_propio.zip &>/dev/null
+    rm -rf /tmp/cookies.txt
+    unzip dataset_propio.zip  &>/dev/null
+    rm -rf dataset_propio.zip
+    echo 'Proceso finalizado correctamente'
     
     # copy dataset.yaml from dataset_externo
     cp /content/dataset_externo/dataset.yaml /content/dataset_propio
